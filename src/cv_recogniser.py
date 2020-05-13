@@ -1,19 +1,7 @@
 import threading
 
 from src import consts, controls
-from flask import Flask, jsonify
 import cv2
-
-app = Flask(__name__)
-
-
-@app.route('/get', methods=['GET'])
-def get_counter():
-    return jsonify({
-                'total': consts.total,
-                'out': consts.ppl_out,
-                'in': consts.ppl_in
-            })
 
 
 def center(x, y, w, h):
@@ -21,8 +9,10 @@ def center(x, y, w, h):
 
 
 def make_offset_lines(frame):
-    cv2.line(frame, (consts.xy1[0], consts.pos_line - consts.offset), (consts.xy2[0], consts.pos_line - consts.offset), consts.CYAN)
-    cv2.line(frame, (consts.xy1[0], consts.pos_line + consts.offset), (consts.xy2[0], consts.pos_line + consts.offset), consts.CYAN)
+    cv2.line(frame, (consts.xy1[0], consts.pos_line - consts.offset), (consts.xy2[0], consts.pos_line - consts.offset),
+             consts.CYAN)
+    cv2.line(frame, (consts.xy1[0], consts.pos_line + consts.offset), (consts.xy2[0], consts.pos_line + consts.offset),
+             consts.CYAN)
 
 
 def make_center_line(frame):
@@ -134,11 +124,5 @@ def run_cv_recogniser():
             break
         elif quit_process():
             break
-
-
-if __name__ == "__main__":
-    th = threading.Thread(target=run_cv_recogniser, args=())
-    th.start()
-    app.run(debug=True, use_reloader=False)
     consts.cap.release()
     cv2.destroyAllWindows()
