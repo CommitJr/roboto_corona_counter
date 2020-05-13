@@ -1,4 +1,8 @@
-from src.consts import *
+import threading
+
+from src import consts, controls
+from flask import Flask, jsonify
+import cv2
 
 app = Flask(__name__)
 
@@ -6,9 +10,9 @@ app = Flask(__name__)
 @app.route('/get', methods=['GET'])
 def get_counter():
     return jsonify({
-                'total': total,
-                'out': ppl_out,
-                'in': ppl_in
+                'total': consts.total,
+                'out': consts.ppl_out,
+                'in': consts.ppl_in
             })
 
 
@@ -17,12 +21,12 @@ def center(x, y, w, h):
 
 
 def make_offset_lines(frame):
-    cv2.line(frame, (xy1[0], pos_line - offset), (xy2[0], pos_line - offset), CYAN)
-    cv2.line(frame, (xy1[0], pos_line + offset), (xy2[0], pos_line + offset), CYAN)
+    cv2.line(frame, (consts.xy1[0], consts.pos_line - consts.offset), (consts.xy2[0], consts.pos_line - consts.offset), consts.CYAN)
+    cv2.line(frame, (consts.xy1[0], consts.pos_line + consts.offset), (consts.xy2[0], consts.pos_line + consts.offset), consts.CYAN)
 
 
 def make_center_line(frame):
-    cv2.line(frame, xy1, xy2, BLUE, 3)
+    cv2.line(frame, consts.xy1, consts.xy2, consts.BLUE, 3)
 
 
 def make_lines(frame):
@@ -31,31 +35,30 @@ def make_lines(frame):
 
 
 def people_common_area(area):
-    return int(area) > area_ret_min
+    return int(area) > consts.area_ret_min
 
 
 def two_people_rect(side):
-    return int(side) < side_ret_max
+    return int(side) < consts.side_ret_max
 
 
 def make_contours(x, y, sqr_width, sqr_height, frame, sqr_center, i):
-    cv2.putText(frame, str(i), (x + 5, y + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, YELLOW, 2)
-    cv2.circle(frame, sqr_center, 4, RED, -1)
-    cv2.rectangle(frame, (x, y), (x + sqr_width, y + sqr_height), GREEN, 2)
+    cv2.putText(frame, str(i), (x + 5, y + 15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, consts.YELLOW, 2)
+    cv2.circle(frame, sqr_center, 4, consts.RED, -1)
+    cv2.rectangle(frame, (x, y), (x + sqr_width, y + sqr_height), consts.GREEN, 2)
 
 
 def infos_text(frame):
-    cv2.putText(frame, f'TOTAL: {total}', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, YELLOW, 2)
-    cv2.putText(frame, f'OUT: {ppl_out}', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, BLUE, 2)
-    cv2.putText(frame, f'IN: {ppl_in}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, RED, 2)
+    cv2.putText(frame, f'TOTAL: {consts.total}', (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, consts.YELLOW, 2)
+    cv2.putText(frame, f'OUT: {consts.ppl_out}', (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, consts.BLUE, 2)
+    cv2.putText(frame, f'IN: {consts.ppl_in}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, consts.RED, 2)
 
 
 def jump_on_x_detector(detect, c, l):
-    return abs(detect[c - 1][0] - l[0]) > jump_on_x_value
+    return abs(detect[c - 1][0] - l[0]) > consts.jump_on_x_value
 
 
 def make_count(frame, closing):
-    global total, ppl_out, ppl_in
     contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     amount = []
     i = 0
@@ -67,34 +70,34 @@ def make_count(frame, closing):
             make_contours(x, y, sqr_width, sqr_height, frame, sqr_center, i)
             if len(amount) <= i:
                 amount.append(1)
-            if len(cache_detects) <= i:  # There's more people in the room
-                cache_detects.append([])  # Creates a new slot in the list
-            if pos_line - offset < sqr_center[1] < pos_line + offset:
-                cache_detects[i].append(sqr_center)
-                amount[i] = 1 if sqr_width < side_ret_max else 2
+            if len(consts.cache_detects) <= i:  # There's more people in the room
+                consts.cache_detects.append([])  # Creates a new slot in the list
+            if consts.pos_line - consts.offset < sqr_center[1] < consts.pos_line + consts.offset:
+                consts.cache_detects[i].append(sqr_center)
+                amount[i] = 1 if sqr_width < consts.side_ret_max else 2
             else:
-                cache_detects[i].clear()
+                consts.cache_detects[i].clear()
             i += 1
 
     if i == 0 or len(contours) == 0:
-        cache_detects.clear()
+        consts.cache_detects.clear()
 
     else:
         i = 0
-        for detect in cache_detects:
+        for detect in consts.cache_detects:
             for (c, l) in enumerate(detect):
-                if detect[c - 1][1] < pos_line < l[1] and not jump_on_x_detector(detect, c, l):  # Out
+                if detect[c - 1][1] < consts.pos_line < l[1] and not jump_on_x_detector(detect, c, l):  # Out
                     detect.clear()
-                    ppl_out += amount[i]
-                    total = total - amount[i] if total >= amount[i] else 0
-                    cv2.line(frame, xy1, xy2, GREEN, 5)
-                elif detect[c - 1][1] > pos_line > l[1] and not jump_on_x_detector(detect, c, l):  # In
+                    consts.ppl_out += amount[i]
+                    consts.total = consts.total - amount[i] if consts.total >= amount[i] else 0
+                    cv2.line(frame, consts.xy1, consts.xy2, consts.GREEN, 5)
+                elif detect[c - 1][1] > consts.pos_line > l[1] and not jump_on_x_detector(detect, c, l):  # In
                     detect.clear()
-                    ppl_in += amount[i]
-                    total += amount[i]
-                    cv2.line(frame, xy1, xy2, RED, 5)
+                    consts.ppl_in += amount[i]
+                    consts.total += amount[i]
+                    cv2.line(frame, consts.xy1, consts.xy2, consts.RED, 5)
                 elif c > 0:
-                    cv2.line(frame, detect[c - 1], l, RED, 1)
+                    cv2.line(frame, detect[c - 1], l, consts.RED, 1)
         i += 1
     infos_text(frame)
 
@@ -107,11 +110,11 @@ def show(dict_frames):
 
 
 def logical_frame():
-    status, frame = cap.read()
+    status, frame = consts.cap.read()
     if not status:
         return status
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-    fgmask = fgbg.apply(gray)
+    fgmask = consts.fgbg.apply(gray)
     bool_val, threshold = cv2.threshold(fgmask, 200, 255, cv2.THRESH_BINARY)
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     opening = cv2.morphologyEx(threshold, cv2.MORPH_OPEN, kernel, iterations=2)
@@ -122,10 +125,10 @@ def logical_frame():
 
 
 def run_cv_recogniser():
-    set_controls()
+    controls.set_controls()
     quit_process = lambda: cv2.waitKey(30) & 0xFF == ord('q')
     while True:
-        update_controls_values()
+        controls.update_controls_values()
         status = logical_frame()
         if not status:
             break
@@ -137,5 +140,5 @@ if __name__ == "__main__":
     th = threading.Thread(target=run_cv_recogniser, args=())
     th.start()
     app.run(debug=True, use_reloader=False)
-    cap.release()
+    consts.cap.release()
     cv2.destroyAllWindows()
