@@ -102,7 +102,7 @@ def show(dict_frames):
 def logical_frame():
     status, frame = consts.cap.read()
     if not status:
-        return status
+        return False
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     fgmask = consts.fgbg.apply(gray)
     bool_val, threshold = cv2.threshold(fgmask, 200, 255, cv2.THRESH_BINARY)
@@ -126,3 +126,7 @@ def run_cv_recogniser():
             break
     consts.cap.release()
     cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    run_cv_recogniser()
