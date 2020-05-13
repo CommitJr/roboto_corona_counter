@@ -15,6 +15,6 @@ def get_counter():
     })
 
 
-th = threading.Thread(target=run_cv_recogniser, args=())
+th = threading.Thread(target=run_cv_recogniser)
 th.start()
 app.run(debug=True, use_reloader=False)
