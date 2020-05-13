@@ -1,21 +1,15 @@
 from src.consts import *
-from flask import Flask, jsonify
-import threading
 
 app = Flask(__name__)
 
 
-def get_counted_value():
-    return jsonify({
-        'total': total,
-        'out': ppl_out,
-        'in': ppl_in
-    })
-
-
 @app.route('/get', methods=['GET'])
 def get_counter():
-    return get_counted_value()
+    return jsonify({
+                'total': total,
+                'out': ppl_out,
+                'in': ppl_in
+            })
 
 
 def center(x, y, w, h):
@@ -56,9 +50,14 @@ def infos_text(frame):
     cv2.putText(frame, f'IN: {ppl_in}', (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.5, RED, 2)
 
 
+def jump_on_x_detector(detect, c, l):
+    return abs(detect[c - 1][0] - l[0]) > jump_on_x_value
+
+
 def make_count(frame, closing):
     global total, ppl_out, ppl_in
     contours, hierarchy = cv2.findContours(closing, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    amount = []
     i = 0
     for contour in contours:
         x, y, sqr_width, sqr_height = cv2.boundingRect(contour)
@@ -66,10 +65,13 @@ def make_count(frame, closing):
         if people_common_area(area):
             sqr_center = center(x, y, sqr_width, sqr_height)
             make_contours(x, y, sqr_width, sqr_height, frame, sqr_center, i)
+            if len(amount) <= i:
+                amount.append(1)
             if len(cache_detects) <= i:  # There's more people in the room
                 cache_detects.append([])  # Creates a new slot in the list
             if pos_line - offset < sqr_center[1] < pos_line + offset:
                 cache_detects[i].append(sqr_center)
+                amount[i] = 1 if sqr_width < side_ret_max else 2
             else:
                 cache_detects[i].clear()
             i += 1
@@ -78,20 +80,22 @@ def make_count(frame, closing):
         cache_detects.clear()
 
     else:
+        i = 0
         for detect in cache_detects:
             for (c, l) in enumerate(detect):
-                if detect[c - 1][1] < pos_line < l[1]:  # Out
+                if detect[c - 1][1] < pos_line < l[1] and not jump_on_x_detector(detect, c, l):  # Out
                     detect.clear()
-                    ppl_out += 1
-                    total += 1
+                    ppl_out += amount[i]
+                    total = total - amount[i] if total >= amount[i] else 0
                     cv2.line(frame, xy1, xy2, GREEN, 5)
-                elif detect[c - 1][1] > pos_line > l[1]:  # In
+                elif detect[c - 1][1] > pos_line > l[1] and not jump_on_x_detector(detect, c, l):  # In
                     detect.clear()
-                    ppl_in += 1
-                    total += 1
+                    ppl_in += amount[i]
+                    total += amount[i]
                     cv2.line(frame, xy1, xy2, RED, 5)
                 elif c > 0:
                     cv2.line(frame, detect[c - 1], l, RED, 1)
+        i += 1
     infos_text(frame)
 
 
@@ -118,8 +122,10 @@ def logical_frame():
 
 
 def run_cv_recogniser():
+    set_controls()
     quit_process = lambda: cv2.waitKey(30) & 0xFF == ord('q')
     while True:
+        update_controls_values()
         status = logical_frame()
         if not status:
             break
