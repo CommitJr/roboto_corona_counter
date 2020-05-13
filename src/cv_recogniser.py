@@ -1,5 +1,3 @@
-import threading
-
 from src import consts, controls
 import cv2
 
