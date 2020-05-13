@@ -23,7 +23,7 @@ Roboto Counter Open is maintained by [Commit Jr](https://www.commitjrdev.com/) m
 - Thermographic camera compatibility
 - Multiple cameras system
 
-## Informações Legais
+## Authority & Credits
 
 - Created by [Alexandre Martins](https://github.com/Agronault) and [Pierre Vieira](https://github.com/PierreVieira)
 - Inspired by: [Xopvision](http://xopvision.pt/) and [João Reis](https://www.youtube.com/channel/UCkZ0WqdJ7igUqBfDZZ1bc1w)
